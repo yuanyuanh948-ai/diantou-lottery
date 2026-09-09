@@ -11,3 +11,4 @@ verify-g1.py
 backup/
 preview-build/
 git-push-upload.bat
+git-push.sh

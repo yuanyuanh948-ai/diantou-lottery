@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# ============================================================
+# 部署脚本模板
+# 真实的 deploy.sh 含 API Token 等密钥，已被 .gitignore 排除、不会入库。
+# 首次使用：复制本文件为 deploy.sh，把三个尖括号占位填成你自己的值。
+#   cp deploy.sh.example deploy.sh
+# ============================================================
+set -e
+cd "$(dirname "$0")"
+
+# Cloudflare API Token：控制台 → My Profile → API Tokens → Create Token
+# 权限至少需要：Account: Workers Scripts:Edit、D1:Edit；Zone: DNS:Edit（绑自定义域名时）
+export CLOUDFLARE_API_TOKEN="<你的_Cloudflare_API_Token>"
+
+# 管理后台登录密码（自定义，将作为 Secret 存入 Cloudflare，不进代码库）
+ADMIN_PASSWORD="<你的后台密码>"
+
+export WRANGLER_LOG=info
+
+# ① 上传代码 + 静态资源，约 30 秒后全球生效
+npx wrangler deploy
+
+# ② 确保后台密码已设置（重复执行无副作用）
+echo "$ADMIN_PASSWORD" | npx wrangler secret put ADMIN_PASSWORD
+
+# ③ 轮换登录签名密钥（安全设计：每次部署旧登录全部失效，需重新登录后台）
+openssl rand -hex 32 | npx wrangler secret put SESSION_SECRET
+
+echo "部署完成。首次部署还需："
+echo "  1. 创建 D1 数据库并把 database_id 填进 wrangler.toml（见 README）"
+echo "  2. wrangler d1 execute lottery --remote --file=schema.sql"

@@ -1,0 +1,13 @@
+node_modules/
+.wrangler/
+.dev.vars
+__pycache__/
+# ↓ 含密钥或内部运维信息，永不入库
+deploy.sh
+deploy.env
+部署清单.md
+部署预览.bat
+verify-g1.py
+backup/
+preview-build/
+git-push-upload.bat

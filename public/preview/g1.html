@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>开箱抽奖 · 预览 G1 墨绿金礼盒</title>
+<style>
+  :root{
+    --green:#1A3A2A;      /* 主墨绿 */
+    --green-deep:#0D2618; /* 深墨绿 */
+    --green-soft:#3A5A4A; /* 浅墨绿（粒子/点缀） */
+    --gold:#C9A96E;       /* 香槟金主 */
+    --gold-bright:#E8D5A3;/* 亮金 */
+    --gold-deep:#A8894A;  /* 暗金 */
+    --cream:#FBF6ED;      /* 卡片米白 */
+    --ink:#2C2C2C;        /* 卡片正文深灰 */
+    --ink-green:#4A5F52;  /* 卡片次级文字（绿灰） */
+    --line:#D9CFBC;       /* 输入框描边（米金灰） */
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    color:var(--ink);
+    min-height:100vh; min-height:100dvh;
+    overflow-x:hidden;
+    touch-action:manipulation;
+    background:linear-gradient(225deg, var(--green) 0%, var(--green-deep) 100%); /* 右上→左下 */
+    background-attachment:fixed;
+  }
+  #dust{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+  #confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
+  .hidden{display:none !important}
+  /* 截图验收模式：冻结所有动画（避免无头浏览器定格在半透明帧） */
+  html.static-qa *{animation:none !important;transition:none !important}
+
+  /* ── 入场节奏：品牌区 → 核心区 → 表单/奖项，依次上滑淡入 ── */
+  @keyframes riseIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+  .page{max-width:400px;margin:0 auto;padding:44px 20px 36px;position:relative;z-index:1}
+  .page header{animation:riseIn .5s ease-out .05s both}
+  #stageIdle{animation:riseIn .55s ease-out .4s both}
+  #stageIdle .draw-btn{animation:riseIn .5s ease-out .52s both}
+  #stageIdle .field:nth-of-type(1){animation:riseIn .5s ease-out .72s both}
+  #stageIdle .field:nth-of-type(2){animation:riseIn .5s ease-out .86s both}
+  #stageIdle .err{animation:riseIn .5s ease-out .95s both}
+  #stageIdle .ptable{animation:riseIn .55s ease-out 1.02s both}
+  #stageIdle .foot-note{animation:riseIn .5s ease-out 1.15s both}
+  .colophon{animation:riseIn .5s ease-out 1.25s both}
+
+  /* ── 顶部品牌区 ── */
+  .logo{display:block;margin:0 auto 16px;max-height:52px;max-width:210px}
+  .seal{width:52px;height:52px;border:3px solid var(--gold);border-radius:10px;display:grid;place-items:center;
+    margin:0 auto 16px;transform:rotate(-4deg);color:var(--gold-bright);font-weight:800;font-size:19px;
+    letter-spacing:2px;text-indent:2px;background:rgba(13,38,24,.6);box-shadow:0 4px 14px rgba(0,0,0,.25)}
+  .title{text-align:center;font-size:40px;font-weight:900;letter-spacing:6px;text-indent:6px;
+    background:linear-gradient(180deg, var(--gold-bright) 8%, var(--gold) 58%, var(--gold-deep) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 2px 8px rgba(0,0,0,.35))}
+  .subtitle{text-align:center;margin-top:10px;font-size:14px;color:#F1E9D8;letter-spacing:3px}
+
+  /* ── 米白礼盒主卡片 ── */
+  .envelope{margin-top:28px;border-radius:20px;padding:28px 22px 24px;position:relative;
+    background:var(--cream);border:1px solid rgba(201,169,110,.4);
+    box-shadow:0 12px 40px rgba(0,0,0,.25)}
+
+  /* ── 抽奖按钮：香槟金渐变 + 旋转呼吸光晕 ── */
+  .draw-btn{position:relative;z-index:2;width:158px;height:158px;border-radius:50%;display:flex;
+    align-items:center;justify-content:center;margin:6px auto 4px;cursor:pointer;border:none;
+    font-family:inherit;will-change:transform;
+    background:linear-gradient(160deg, var(--gold-bright) 0%, var(--gold) 55%, var(--gold-deep) 100%);
+    box-shadow:0 10px 28px rgba(0,0,0,.3), 0 0 26px rgba(201,169,110,.35),
+      inset 0 3px 8px rgba(255,255,255,.65), inset 0 -8px 16px rgba(122,94,40,.45)}
+  .draw-btn::before{content:"";position:absolute;inset:9px;border-radius:50%;border:2px dashed rgba(26,58,42,.5)}
+  /* 光晕环：金渐变 conic，旋转 360°/10s，透明度 .2–.5 脉动 */
+  .draw-btn::after{content:"";position:absolute;inset:-14px;border-radius:50%;pointer-events:none;
+    background:conic-gradient(from 0deg,
+      rgba(232,213,163,0) 0%, rgba(232,213,163,.9) 12%, rgba(201,169,110,0) 30%,
+      rgba(201,169,110,.85) 55%, rgba(232,213,163,0) 70%, rgba(168,137,74,.85) 88%, rgba(232,213,163,0) 100%);
+    -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+    mask:radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+    animation:halo 10s linear infinite;will-change:transform,opacity}
+  @keyframes halo{
+    0%{transform:rotate(0deg);opacity:.2}
+    25%{opacity:.5}
+    50%{transform:rotate(180deg);opacity:.2}
+    75%{opacity:.5}
+    100%{transform:rotate(360deg);opacity:.2}
+  }
+  .draw-btn .txt{font-size:25px;font-weight:900;letter-spacing:5px;text-indent:5px;line-height:1.35;color:var(--green)}
+  @media (hover:hover){ .draw-btn:hover{transform:scale(1.05)} }
+  .draw-btn:active{transform:scale(.95)}
+  .draw-btn:focus-visible{outline:3px solid var(--gold);outline-offset:4px}
+  .draw-btn[disabled]{opacity:.75;cursor:default}
+  .draw-btn[disabled]::after{animation:none;opacity:0}
+  .draw-btn .ripple{position:absolute;inset:-4px;border-radius:50%;border:3px solid rgba(232,213,163,.95);
+    opacity:0;pointer-events:none}
+  .draw-btn .ripple.go{animation:rippleGo .7s ease-out forwards}
+  @keyframes rippleGo{0%{transform:scale(.8);opacity:.95}100%{transform:scale(1.55);opacity:0}}
+  .draw-btn.bounce{animation:btnBounce .34s cubic-bezier(.34,1.8,.64,1)}
+  @keyframes btnBounce{0%{transform:scale(.92)}55%{transform:scale(1.06)}100%{transform:scale(1)}}
+
+  /* ── 表单：聚焦金边 + 左侧金竖条 + 底部流光 ── */
+  .field{margin:16px auto 0;max-width:260px;position:relative}
+  .field.first{margin-top:26px}
+  .field label{display:block;text-align:center;font-size:13px;color:var(--ink-green);margin-bottom:8px;letter-spacing:1px}
+  .field input{width:100%;height:46px;border-radius:12px;border:1.5px solid var(--line);
+    background:#FFFDF8;color:var(--ink);text-align:center;font-size:16px;outline:none;font-family:inherit;
+    transition:border-color .25s, box-shadow .25s}
+  .field input::placeholder{color:#B3AC9C}
+  .field input:focus{border-color:var(--gold);box-shadow:inset 3px 0 0 var(--gold)}
+  .field::after{content:"";position:absolute;left:6px;right:6px;bottom:0;height:2px;border-radius:2px;
+    background:linear-gradient(90deg, transparent, var(--gold-bright), var(--gold), transparent);
+    transform:translateX(-110%);opacity:0;pointer-events:none}
+  .field:focus-within::after{opacity:1;animation:sweep 1.6s ease-in-out infinite}
+  @keyframes sweep{0%{transform:translateX(-110%)}100%{transform:translateX(110%)}}
+  .err{margin:12px auto 0;max-width:260px;text-align:center;font-size:13px;color:#A9503A;min-height:1.3em}
+
+  /* ── 奖项列表：米白卡上的浅金描边行 ── */
+  .ptable{margin-top:26px}
+  .ptable .row{display:flex;align-items:center;gap:10px;background:#FFFDF8;border:1px solid rgba(201,169,110,.35);
+    border-radius:12px;padding:11px 14px;margin-bottom:12px;font-size:13px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .ptable .row:last-child{margin-bottom:0}
+  .ptable .lv{font-weight:800;color:var(--green);flex:0 0 3.8em}
+  .ptable .rw{flex:1;min-width:0;color:var(--ink)}
+  .foot-note{margin-top:18px;text-align:center;font-size:12px;color:#8E9A8C;letter-spacing:1px}
+
+  /* ── 滚动开奖：深墨绿内衬 + 金框（礼盒开箱瞬间） ── */
+  .slot{margin:14px auto 0;width:100%;max-width:270px;height:150px;border-radius:16px;
+    background:linear-gradient(160deg, var(--green) 0%, var(--green-deep) 100%);
+    border:1px solid rgba(201,169,110,.55);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    box-shadow:inset 0 4px 14px rgba(0,0,0,.35)}
+  .slot .emoji{font-size:52px;line-height:1}
+  .slot .name{font-size:16px;font-weight:700;color:var(--gold-bright);text-align:center;padding:0 12px;min-height:2.8em}
+  .pop{animation:pop .12s ease-out}
+  @keyframes pop{0%{transform:scale(.86)}100%{transform:scale(1)}}
+  .rolling-tip{text-align:center;margin-top:18px;font-size:14px;color:var(--ink-green);letter-spacing:2px}
+
+  /* ── 中奖券：香槟金渐变卡 + 弹簧翻转入场 + 阴影扩散 ── */
+  .slip{margin-top:28px;border-radius:20px;position:relative;
+    background:linear-gradient(160deg, var(--gold-bright) 0%, var(--gold) 58%, var(--gold-deep) 100%);
+    color:var(--green);padding:30px 22px 24px;
+    border:1px solid rgba(255,255,255,.5);
+    will-change:transform;
+    animation:springIn .65s cubic-bezier(.34,1.45,.64,1) both}
+  @keyframes springIn{
+    0%{transform:scale(0) rotate(-5deg);opacity:0;box-shadow:0 0 0 rgba(0,0,0,0)}
+    55%{transform:scale(1.1) rotate(1.5deg);opacity:1}
+    78%{transform:scale(.97) rotate(-.5deg)}
+    100%{transform:scale(1) rotate(0);box-shadow:0 14px 44px rgba(0,0,0,.32)}
+  }
+  .slip::before{content:"";position:absolute;inset:8px;border:1px solid rgba(26,58,42,.35);
+    border-radius:14px;pointer-events:none}
+  .slip.top{box-shadow:0 14px 44px rgba(0,0,0,.32), 0 0 0 4px rgba(232,213,163,.5)}
+  .already{display:block;width:fit-content;margin:0 auto 6px;background:rgba(26,58,42,.85);color:var(--gold-bright);
+    font-size:12px;padding:4px 12px;border-radius:999px;letter-spacing:1px}
+  .r-emoji{text-align:center;font-size:64px;line-height:1;margin-top:10px}
+  .r-pre{text-align:center;margin-top:16px;font-size:15px;color:#3E5A4A;letter-spacing:2px}
+  .r-level{text-align:center;font-size:34px;font-weight:900;color:var(--green-deep);letter-spacing:6px;text-indent:6px;margin-top:4px}
+  .r-reward{text-align:center;margin-top:10px;font-size:17px;font-weight:800;color:var(--green)}
+  .tear{display:flex;align-items:center;gap:8px;margin:22px 0 14px;color:rgba(26,58,42,.55);font-size:13px}
+  .tear::before,.tear::after{content:"";flex:1;border-top:2px dashed rgba(26,58,42,.4)}
+  .code{display:flex;align-items:center;justify-content:space-between;background:rgba(26,58,42,.9);
+    border:1px solid rgba(232,213,163,.5);border-radius:12px;padding:12px 14px}
+  .code .k{font-size:13px;color:var(--gold-bright)}
+  .code .v{font-family:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;font-size:19px;font-weight:700;
+    letter-spacing:2px;color:#FFF7E6}
+  .hint{margin-top:16px;text-align:center;font-size:13px;color:#3E5A4A;letter-spacing:1px}
+
+  .colophon{text-align:center;margin-top:26px;font-size:12px;color:#6E8574;letter-spacing:1px}
+
+  /* ── 预览工具条（仅预览版有） ── */
+  .pv-bar{position:fixed;top:0;left:0;right:0;z-index:99;display:flex;gap:8px;align-items:center;justify-content:center;
+    padding:7px 10px;background:rgba(9,24,16,.82);backdrop-filter:blur(6px);font-size:12px;color:#E8D5A3}
+  .pv-bar a{color:var(--gold-bright);text-decoration:none;padding:2px 12px;border:1px solid rgba(232,213,163,.5);border-radius:999px}
+  .pv-bar a.cur{background:var(--gold);color:var(--green-deep);font-weight:800;border-color:var(--gold)}
+  body.pv .page{padding-top:64px}
+
+  @media (prefers-reduced-motion: reduce){
+    .page header,#stageIdle,#stageIdle .draw-btn,#stageIdle .field,#stageIdle .err,
+    #stageIdle .ptable,#stageIdle .foot-note,.colophon,.slip{animation:none}
+    .draw-btn::after,.field::after{animation:none}
+    .pop,.draw-btn.bounce,.draw-btn .ripple.go{animation:none}
+  }
+</style>
+</head>
+<body class="pv">
+<canvas id="dust"></canvas>
+<canvas id="confetti"></canvas>
+<div class="pv-bar"><span>预览·演示模式</span><a href="/preview/v1.html">V1</a><a href="/preview/v2.html">V2</a><a href="/preview/v3.html">V3</a><a class="cur" href="/preview/g1.html">G1 墨绿金礼盒</a></div>
+<div class="page">
+  <header>
+    <img class="logo" id="logo" alt="点头教育" src="/logo.png">
+    <div class="seal hidden" id="seal">点头</div>
+    <h1 class="title">开箱抽奖</h1>
+    <p class="subtitle">人人有奖，100%中奖</p>
+  </header>
+
+  <main>
+    <section id="stageIdle" class="envelope">
+      <button class="draw-btn" id="drawBtn" type="button"><span class="txt">立即<br>抽奖</span></button>
+      <div class="field first">
+        <label for="nick">你的昵称</label>
+        <input id="nick" maxlength="12" placeholder="印在兑奖券上" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="phone">手机号（仅用于兑奖核对）</label>
+        <input id="phone" maxlength="11" inputmode="numeric" placeholder="11 位手机号，一个号限抽一次" autocomplete="off">
+      </div>
+      <p class="err" id="err"></p>
+      <div class="ptable" id="ptableRows"></div>
+      <p class="foot-note">每人限抽一次，中奖后截图找助教兑奖</p>
+    </section>
+
+    <section id="stageRoll" class="envelope hidden">
+      <div class="slot">
+        <div class="emoji" id="slotEmoji">🎁</div>
+        <div class="name" id="slotName"></div>
+      </div>
+      <p class="rolling-tip">好运用力抽取中…</p>
+    </section>
+
+    <section id="stageResult" class="slip hidden">
+      <span class="already hidden" id="already">你已参与过本次抽奖，这是你的结果</span>
+      <span class="already hidden" id="demoTag">预览演示数据 · 非真实抽奖</span>
+      <div class="r-emoji" id="rEmoji">🏆</div>
+      <p class="r-pre" id="rPre">恭喜，你抽中了</p>
+      <div class="r-level" id="rLevel">一等奖</div>
+      <p class="r-reward" id="rReward"></p>
+      <div class="tear"><span>✂</span></div>
+      <div class="code"><span class="k">兑奖码</span><span class="v" id="rCode"></span></div>
+      <p class="hint">📸 截图保存，联系助教兑奖</p>
+    </section>
+  </main>
+
+  <p class="colophon">活动最终解释权归点头教育所有</p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const dprCap = () => Math.min(devicePixelRatio || 1, 2);
+
+// G1 墨绿金礼盒：动效参数（demo 演示模式，不请求 /api/draw、不写库）
+const V = {"name":"G1","demo":true,"clickBurst":60,
+  "confetti":{"normal":160,"top":280,
+    "colors":["#E8D5A3","#C9A96E","#A8894A","#3A5A4A","#1A3A2A","#FBF6ED"],
+    "shapes":["rect","circle"]},
+  "dust":{"count":26,"countMobile":16,"maxA":.45,"colors":["201,169,110","58,90,74","232,213,163"]}};
+
+$("logo").addEventListener("error", () => {
+  $("logo").classList.add("hidden");
+  $("seal").classList.remove("hidden");
+});
+
+let CONFIG = null;
+(async () => {
+  try {
+    const r = await fetch("/api/config");
+    CONFIG = await r.json();
+    $("ptableRows").innerHTML = CONFIG.prizes.map(p =>
+      `<div class="row"><span class="lv">${p.level}</span><span class="rw">${p.reward}</span></div>`).join("");
+  } catch (e) {
+    $("ptableRows").innerHTML =
+      `<div class="row"><span class="rw">奖品列表加载失败，请刷新重试</span></div>`;
+  }
+})();
+
+try {
+  const last = JSON.parse(localStorage.getItem("dt_last") || "null");
+  if (last) { $("nick").value = last.nickname || ""; $("phone").value = last.phone || ""; }
+} catch (e) {}
+
+function show(stage) {
+  $("stageIdle").classList.toggle("hidden", stage !== "idle");
+  $("stageRoll").classList.toggle("hidden", stage !== "roll");
+  $("stageResult").classList.toggle("hidden", stage !== "result");
+}
+function showErr(msg) { $("err").textContent = msg; }
+function setBusy(b) { $("drawBtn").disabled = b; }
+
+let drawing = false;
+$("drawBtn").addEventListener("click", tryDraw);
+$("nick").addEventListener("keydown", e => { if (e.key === "Enter") $("phone").focus(); });
+$("phone").addEventListener("keydown", e => { if (e.key === "Enter") tryDraw(); });
+
+// ── 背景氛围粒子（金色/浅墨绿，缓慢漂浮） ──
+const dust = $("dust"), dctx = dust.getContext("2d");
+let motes = [], dustRaf = null, dustLast = 0;
+function dustResize() { const d = dprCap(); dust.width = innerWidth * d; dust.height = innerHeight * d; }
+addEventListener("resize", dustResize); dustResize();
+(function initMotes() {
+  const n = innerWidth < 480 ? V.dust.countMobile : V.dust.count; // 手机端减量
+  for (let i = 0; i < n; i++) {
+    motes.push({
+      x: Math.random(), y: Math.random(),
+      r: 1.5 + Math.random() * 2.5,           // 直径约 3–8px
+      vy: 4 + Math.random() * 8,              // 缓慢上浮 px/s
+      sw: 10 + Math.random() * 26,            // 水平正弦摆幅
+      sf: .1 + Math.random() * .3,            // 摆动频率
+      ph: Math.random() * Math.PI * 2,
+      a: .08 + Math.random() * (V.dust.maxA - .08),
+      tw: .3 + Math.random() * .9,            // 闪烁频率
+      c: V.dust.colors[i % V.dust.colors.length],
+    });
+  }
+})();
+function drawMotes(t, dt) {
+  const d = dprCap(), W = innerWidth, H = innerHeight;
+  dctx.clearRect(0, 0, dust.width, dust.height);
+  for (const p of motes) {
+    p.y -= (p.vy * dt) / H; if (p.y < -.02) { p.y = 1.02; p.x = Math.random(); }
+    const x = (p.x * W + Math.sin(t * p.sf * 6.283 + p.ph) * p.sw) * d;
+    const y = p.y * H * d;
+    const a = Math.max(p.a * (.6 + .4 * Math.sin(t * p.tw * 6.283 + p.ph)), 0);
+    dctx.beginPath(); dctx.fillStyle = `rgba(${p.c},${a.toFixed(3)})`;
+    dctx.arc(x, y, p.r * d, 0, Math.PI * 2); dctx.fill();
+  }
+}
+function dustLoop(now) {
+  const dt = Math.min((now - dustLast) / 1000, .1); dustLast = now;
+  drawMotes(now / 1000, dt);
+  dustRaf = requestAnimationFrame(dustLoop);
+}
+function startDust() {
+  if (reduced) { drawMotes(2.71, 0); return; }
+  dustLast = performance.now(); dustRaf = requestAnimationFrame(dustLoop);
+}
+
+// ── 金色纸屑（Canvas，无第三方库） ──
+const cvs = $("confetti"), ctx = cvs.getContext("2d");
+let parts = [], rafId = null, lastT = 0;
+function resize() { const d = dprCap(); cvs.width = innerWidth * d; cvs.height = innerHeight * d; }
+addEventListener("resize", resize); resize();
+
+function burst(n, opts = {}) {
+  if (reduced) return;
+  const d = dprCap();
+  const colors = opts.colors || V.confetti.colors;
+  const spread = opts.spread ?? .4;
+  const oy = opts.y ?? cvs.height * .34;
+  for (let i = 0; i < n; i++) {
+    if (parts.length > 700) parts.shift();
+    parts.push({
+      x: cvs.width / 2 + (Math.random() - .5) * cvs.width * spread,
+      y: oy + (Math.random() - .5) * 30 * d,
+      vx: (Math.random() - .5) * 14 * d,      // 放射初速（飞行半径约 200–500px）
+      vy: (Math.random() * -12 - 4) * d,
+      g: .32 * d, s: (4 + Math.random() * 7) * d,
+      r: Math.random() * Math.PI, vr: (Math.random() - .5) * .35,
+      shape: V.confetti.shapes[i % V.confetti.shapes.length], // 矩形 / 圆形
+      c: colors[i % colors.length],
+      life: 1, decay: .0055 + Math.random() * .002,  // 约 2.2–3s 生命
+      wob: Math.random() * Math.PI * 2, wobV: .06 + Math.random() * .1,
+    });
+  }
+  if (!rafId) { lastT = performance.now(); rafId = requestAnimationFrame(loop); }
+}
+function loop(now) {
+  const dt = Math.min((now - lastT) / 16.7, 3); lastT = now;
+  ctx.clearRect(0, 0, cvs.width, cvs.height);
+  parts = parts.filter(p => p.life > 0 && p.y < cvs.height + 40);
+  for (const p of parts) {
+    p.vy += p.g * dt;                        // 重力 → 缓慢下落
+    p.x += (p.vx + Math.sin(p.wob) * 1.4 * dprCap()) * dt;
+    p.wob += p.wobV * dt; p.y += p.vy * dt;
+    p.vx *= Math.pow(.99, dt); p.r += p.vr * dt; p.life -= p.decay * dt;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+    ctx.globalAlpha = Math.max(p.life, 0); ctx.fillStyle = p.c;
+    if (p.shape === "circle") { ctx.beginPath(); ctx.arc(0, 0, p.s / 2, 0, Math.PI * 2); ctx.fill(); }
+    else { ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * .6); }
+    ctx.restore();
+  }
+  if (parts.length) rafId = requestAnimationFrame(loop);
+  else { rafId = null; ctx.clearRect(0, 0, cvs.width, cvs.height); }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    if (dustRaf) { cancelAnimationFrame(dustRaf); dustRaf = null; }
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  } else {
+    if (!dustRaf && !reduced) { dustLast = performance.now(); dustRaf = requestAnimationFrame(dustLoop); }
+    if (!rafId && parts.length) { lastT = performance.now(); rafId = requestAnimationFrame(loop); }
+  }
+});
+startDust();
+
+// ── 按钮点击反馈：弹跳 + 波纹 + 按钮中心放射纸屑 ──
+function fireClickFx() {
+  const btn = $("drawBtn");
+  btn.classList.remove("bounce"); void btn.offsetWidth; btn.classList.add("bounce");
+  const ring = document.createElement("span");
+  ring.className = "ripple go";
+  btn.appendChild(ring);
+  ring.addEventListener("animationend", () => ring.remove());
+  const rc = btn.getBoundingClientRect();
+  burst(V.clickBurst, { y: Math.max(60, rc.top + rc.height / 2) * dprCap(), spread: .3 });
+}
+
+async function tryDraw() {
+  if (drawing) return;
+  const nickname = $("nick").value.trim().slice(0, 12);
+  const phone = $("phone").value.trim();
+  if (!nickname) return showErr("先填个昵称吧");
+  if (!/^1[3-9]\d{9}$/.test(phone)) return showErr("请填 11 位手机号（1 开头）");
+  showErr("");
+  drawing = true; setBusy(true);
+  fireClickFx();
+
+  if (V.demo) {
+    return setTimeout(() => {
+      const prizes = (CONFIG && CONFIG.prizes.length)
+        ? CONFIG.prizes : [{ emoji: "🎁", level: "演示奖", reward: "演示奖品" }];
+      const p = prizes[Math.floor(Math.random() * prizes.length)];
+      const fake = { nickname, level: p.level, emoji: p.emoji, reward: p.reward,
+                     code: "DEMO" + Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, "X") };
+      drawing = false; setBusy(false);
+      roll(fake, false);
+    }, 160);
+  }
+
+  let data;
+  try {
+    const r = await fetch("/api/draw", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ nickname, phone }),
+    });
+    data = await r.json();
+    if (!r.ok) { showErr(data.error || "出了点小问题，请重试"); drawing = false; setBusy(false); return; }
+  } catch (e) {
+    showErr("网络开小差了，请重试"); drawing = false; setBusy(false); return;
+  }
+  try { localStorage.setItem("dt_last", JSON.stringify({ nickname, phone })); } catch (e) {}
+  roll(data.result, data.already);
+}
+
+function roll(finalPrize, already) {
+  show("roll");
+  const spinPool = CONFIG ? CONFIG.prizes : [{ emoji: "🎁", level: "", reward: "" }];
+  const slotEmoji = $("slotEmoji"), slotName = $("slotName");
+  const spin = () => {
+    const p = spinPool[Math.floor(Math.random() * spinPool.length)];
+    slotEmoji.textContent = p.emoji;
+    slotName.textContent = p.level + " " + p.reward;
+    slotEmoji.classList.remove("pop"); void slotEmoji.offsetWidth; slotEmoji.classList.add("pop");
+  };
+  if (reduced) { spin(); return setTimeout(() => reveal(finalPrize, already), 300); }
+  spin();
+  const t0 = performance.now(), FAST_END = 1500, END = 2350;
+  let lastTick = 0;
+  (function frame(now) {
+    const el = now - t0;
+    if (el >= END) return reveal(finalPrize, already);
+    const gap = el < FAST_END ? 62 : 62 + (el - FAST_END) / (END - FAST_END) * 190;
+    if (now - lastTick >= gap) { lastTick = now; spin(); }
+    requestAnimationFrame(frame);
+  })(t0);
+}
+
+function reveal(p, already) {
+  setTimeout(() => {
+    fillResult(p, already);
+    show("result");
+    burst(p.level === "一等奖" ? V.confetti.top : V.confetti.normal);
+  }, 380);
+}
+
+function fillResult(p, already) {
+  $("already").classList.toggle("hidden", !already);
+  $("demoTag").classList.toggle("hidden", !V.demo);
+  $("rEmoji").textContent = p.emoji || "🎉";
+  $("rLevel").textContent = p.level;
+  $("rReward").textContent = p.reward;
+  $("rCode").textContent = p.code;
+  $("rPre").textContent = `恭喜「${p.nickname}」`;
+  $("stageResult").classList.toggle("top", p.level === "一等奖");
+}
+
+// ── 截图验收用：?static=1 冻结一帧（并关闭全部动画避免定格发暗） ──
+if (location.search.indexOf("static=1") > -1) {
+  document.documentElement.classList.add("static-qa");
+  drawMotes(2.71, 0);
+  burst(90, { y: cvs.height * .36 });
+  for (let i = 0; i < 26; i++) {
+    parts.forEach(p => { p.vy += p.g; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life -= p.decay; });
+  }
+  lastT = performance.now();
+  loop(performance.now());
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+}
+</script>
+</body>
+</html>

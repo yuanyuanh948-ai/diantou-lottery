@@ -1,0 +1,19 @@
+name = "diantou-lottery"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+
+# 自定义域名绑定（顶层配置）
+routes = [
+  { pattern = "dtgift.hyyuan.me", custom_domain = true }
+]
+
+# 静态资源目录：学员页 public/index.html、管理页 public/admin/index.html、logo.png
+[assets]
+directory = "./public"
+
+# D1 数据库：本地开发用本地 SQLite；部署前先 `npx wrangler d1 create lottery`，
+# 把返回的 database_id 填到下面替换 PLACEHOLDER
+[[d1_databases]]
+binding = "DB"
+database_name = "lottery"
+database_id = "0e9f6482-610d-4786-b3ca-346f07f7ebef"

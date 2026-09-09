@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>抽奖管理后台</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:#f6f7f9;color:#1f2430}
+  .wrap{max-width:900px;margin:0 auto;padding:28px 16px 40px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:#6b7280;font-size:13px;margin:0 0 18px}
+  .card{background:#fff;border:1px solid #e5e8ee;border-radius:12px;padding:16px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px;margin:0 0 14px}
+  .stat{background:#fff;border:1px solid #e5e8ee;border-radius:12px;padding:12px 14px}
+  .stat b{font-size:22px;display:block;font-variant-numeric:tabular-nums}
+  .stat span{font-size:12px;color:#6b7280}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid #d6dae2;background:#fff;
+    padding:8px 14px;color:#1f2430}
+  button:hover{border-color:#b8bfcc}
+  button:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+  .btn-primary{background:#B01F2E;border-color:#B01F2E;color:#fff}
+  .btn-primary:hover{background:#961a27}
+  .btn-danger{color:#B01F2E}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid #e5e8ee;border-radius:12px}
+  th,td{padding:9px 10px;border-bottom:1px solid #eef0f4;text-align:left;white-space:nowrap}
+  th{color:#6b7280;font-weight:600;background:#fafbfc}
+  tr:last-child td{border-bottom:none}
+  td.actions{white-space:nowrap}
+  td.actions button{padding:4px 10px;font-size:12px;margin-right:6px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
+  .tag.ok{background:#e7f6ec;color:#1a7f37}
+  .tag.no{background:#fdf1d8;color:#92600a}
+  .muted{color:#9aa2b1}
+  .msg{color:#B01F2E;font-size:13px;margin-top:10px;min-height:1.3em}
+  .login{max-width:340px;margin:90px auto 0}
+  .login input{width:100%;padding:10px 12px;border:1px solid #d6dae2;border-radius:8px;font:inherit;margin-top:12px}
+  .login button{width:100%;margin-top:14px}
+  .empty{padding:30px;text-align:center;color:#9aa2b1}
+  .scroller{overflow-x:auto}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+const app = document.getElementById("app");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = ts => new Date((ts + 8 * 3600) * 1000).toISOString().slice(5, 16).replace("T", " ");
+const maskPhone = p => String(p ?? "").replace(/^(1\d{2})\d{4}(\d{4})$/, "$1****$2");
+const LEVELS = ["一等奖", "二等奖", "三等奖", "四等奖"];
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { "content-type": "application/json" }, ...opts });
+  if (r.status === 401) { renderLogin(); throw new Error("未登录"); }
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || "请求失败");
+  return data;
+}
+
+// ── 登录 ──
+function renderLogin(msg = "") {
+  app.innerHTML = `
+    <div class="login card">
+      <h1>抽奖管理后台</h1>
+      <p class="sub">输入管理密码进入</p>
+      <input id="pw" type="password" placeholder="管理密码" autofocus>
+      <button class="btn-primary" id="loginBtn">登录</button>
+      <p class="msg">${esc(msg)}</p>
+    </div>`;
+  const doIt = () => doLogin($("#pw").value);
+  $("#loginBtn").addEventListener("click", doIt);
+  $("#pw").addEventListener("keydown", e => { if (e.key === "Enter") doIt(); });
+  $("#pw").focus();
+}
+const $ = s => document.querySelector(s);
+async function doLogin(pw) {
+  try {
+    await api("/api/admin/login", { method: "POST", body: JSON.stringify({ password: pw }) });
+    load();
+  } catch (e) { renderLogin("密码不对，再试试"); }
+}
+
+// ── 后台主视图 ──
+async function load() {
+  let data;
+  try { data = await api("/api/admin/data"); }
+  catch (e) { return; }
+  const { stats, rows } = data;
+  app.innerHTML = `
+    <h1>抽奖管理后台</h1>
+    <p class="sub">每 15 秒自动刷新 · 时间为北京时间</p>
+    <div class="stats">
+      <div class="stat"><b>${stats.total}</b><span>参与人数</span></div>
+      ${LEVELS.map(l => `<div class="stat"><b>${stats.byLevel[l] || 0}</b><span>${l}</span></div>`).join("")}
+      <div class="stat"><b>${stats.redeemed}</b><span>已核销</span></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn-primary" id="exportBtn">导出 CSV</button>
+      <button id="refreshBtn">刷新</button>
+      <button id="logoutBtn">退出登录</button>
+      <span style="flex:1"></span>
+      <button class="btn-danger" id="resetBtn">清空全部记录</button>
+    </div>
+    <div class="scroller"><table>
+      <thead><tr><th>时间</th><th>昵称</th><th>手机号</th><th>奖项</th><th>兑奖码</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody id="tbody">${
+        rows.length === 0
+          ? `<tr><td colspan="7"><div class="empty">还没有人抽奖</div></td></tr>`
+          : rows.map(r => `
+        <tr>
+          <td class="muted">${fmt(r.ts)}</td>
+          <td>${esc(r.nickname)}</td>
+          <td title="${esc(r.phone)}">${esc(maskPhone(r.phone))}</td>
+          <td>${esc(r.prize_level)}</td>
+          <td style="font-family:ui-monospace,Consolas,monospace">${esc(r.code)}</td>
+          <td>${r.redeemed ? `<span class="tag ok">已核销</span>` : `<span class="tag no">未核销</span>`}</td>
+          <td class="actions">
+            <button data-action="redeem" data-code="${esc(r.code)}" data-cur="${r.redeemed}">${r.redeemed ? "撤销核销" : "核销"}</button>
+            <button class="btn-danger" data-action="del" data-id="${r.id}">删除</button>
+          </td>
+        </tr>`).join("")
+      }</tbody>
+    </table></div>`;
+
+  $("#exportBtn").addEventListener("click", () => location.href = "/api/admin/export.csv");
+  $("#refreshBtn").addEventListener("click", load);
+  $("#logoutBtn").addEventListener("click", async () => {
+    try { await api("/api/admin/logout", { method: "POST", body: "{}" }); } catch (e) {}
+    renderLogin();
+  });
+  $("#resetBtn").addEventListener("click", resetAll);
+  $("#tbody").addEventListener("click", onRowAction);
+}
+
+async function onRowAction(e) {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const { action, code, id, cur } = btn.dataset;
+  try {
+    if (action === "redeem") {
+      await api("/api/admin/redeem", { method: "POST",
+        body: JSON.stringify({ code, redeemed: cur === "0" }) });
+    } else if (action === "del") {
+      if (!confirm("删除这条记录？删除后该学员可以重新抽。")) return;
+      await api("/api/admin/delete", { method: "POST", body: JSON.stringify({ id: Number(id) }) });
+    }
+    load();
+  } catch (err) { alert(err.message); }
+}
+
+async function resetAll() {
+  if (!confirm("确定清空全部抽奖记录？此操作不可恢复！")) return;
+  if (!confirm("再次确认：真的要清空吗？")) return;
+  try {
+    await api("/api/admin/reset", { method: "POST", body: JSON.stringify({ confirm: "RESET" }) });
+    load();
+  } catch (err) { alert(err.message); }
+}
+
+renderLogin();
+setInterval(() => { if ($("#tbody")) load(); }, 15000);
+</script>
+</body>
+</html>
